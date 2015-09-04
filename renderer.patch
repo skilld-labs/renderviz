@@ -1,0 +1,37 @@
+diff --git a/core/lib/Drupal/Core/Render/Renderer.php b/core/lib/Drupal/Core/Render/Renderer.php
+index 48b3bcd..1ba6cc2 100644
+--- a/core/lib/Drupal/Core/Render/Renderer.php
++++ b/core/lib/Drupal/Core/Render/Renderer.php
+@@ -7,6 +7,7 @@
+ 
+ namespace Drupal\Core\Render;
+ 
++use Drupal\Component\Serialization\Json;
+ use Drupal\Component\Utility\Html;
+ use Drupal\Component\Utility\SafeMarkup;
+ use Drupal\Component\Utility\UrlHelper;
+@@ -395,6 +396,9 @@ protected function doRender(&$elements, $is_root_call = FALSE) {
+     $elements['#cache']['max-age'] = isset($elements['#cache']['max-age']) ? $elements['#cache']['max-age'] : Cache::PERMANENT;
+     $elements['#attached'] = isset($elements['#attached']) ? $elements['#attached'] : array();
+ 
++    // Save cache state before render.
++    $elements['#debug']['#cache_start'] = $elements['#cache'];
++
+     // Allow #pre_render to abort rendering.
+     if (!empty($elements['#printed'])) {
+       // The #printed element contains all the bubbleable rendering metadata for
+@@ -553,6 +557,14 @@ protected function doRender(&$elements, $is_root_call = FALSE) {
+     // Rendering is finished, all necessary info collected!
+     $context->bubble();
+ 
++    // Add debug output.
++    $interesting_keys = ['keys', 'contexts', 'tags', 'max-age'];
++    if (array_intersect(array_keys($elements['#cache']), $interesting_keys) || array_intersect(array_keys($elements['#debug']['#cache_start']), $interesting_keys)) {
++      $prefix = '<!--RENDERER_START-->' . '<!--' . Json::encode($elements['#debug']['#cache_start']) .  '-->';
++      $suffix = '<!--' . Json::encode($elements['#cache']) .  '-->' . '<!--RENDERER_END-->';
++      $elements['#markup'] = $prefix . $elements['#markup'] . $suffix;
++    }
++
+     $elements['#printed'] = TRUE;
+     return $elements['#markup'];
+   }
